@@ -1,0 +1,59 @@
+---
+# ---------- YUM 源配置 ----------
+- name: 删除原有所有 YUM 仓库文件
+  shell: rm -f /etc/yum.repos.d/*.repo
+  become: yes
+  when:
+    - configure_yum_repos | bool
+    - clean_old_repos | bool
+
+- name: 确保 /etc/yum.repos.d 目录存在
+  file:
+    path: /etc/yum.repos.d
+    state: directory
+    mode: '0755'
+  become: yes
+  when: configure_yum_repos | bool
+
+- name: 推送控制节点上的 YUM 源文件
+  copy:
+    src: "{{ yum_repo_src }}"
+    dest: "{{ yum_repo_dest }}"
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+  when: configure_yum_repos | bool
+  notify: refresh yum cache
+
+- name: 立即刷新 YUM 缓存
+  command: yum makecache
+  become: yes
+  changed_when: false
+  when: configure_yum_repos | bool
+
+# ---------- NTP 客户端配置 ----------
+- name: 安装 chrony 时间服务
+  package:
+    name: chrony
+    state: present
+  become: yes
+  when: configure_ntp_client | bool
+
+- name: 配置 NTP 客户端指向控制节点
+  lineinfile:
+    path: /etc/chrony.conf
+    regexp: '^pool '
+    line: "pool {{ ntp_server }} iburst"
+    state: present
+  become: yes
+  when: configure_ntp_client | bool
+  notify: restart chronyd
+
+- name: 启动 chronyd 并设置开机自启
+  service:
+    name: chronyd
+    state: started
+    enabled: yes
+  become: yes
+  when: configure_ntp_client | bool

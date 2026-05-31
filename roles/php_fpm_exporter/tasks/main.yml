@@ -1,0 +1,40 @@
+---
+- name: 检查 PHP-FPM socket 是否可访问
+  stat:
+    path: "{{ php_fpm_listen | regex_replace('^unix://', '') }}"
+  register: socket_stat
+  when: php_fpm_listen.startswith('unix://')
+
+- name: 断言 PHP-FPM socket 存在
+  fail:
+    msg: "PHP-FPM socket 不存在: {{ php_fpm_listen }}"
+  when:
+    - php_fpm_listen.startswith('unix://')
+    - not socket_stat.stat.exists
+
+- name: Create {{ user }} user
+  user:
+    name: "{{ user }}"
+    system: yes
+    shell: /bin/false
+    create_home: no
+
+- name: Copy php-fpm_exporter binary to install path
+  copy:
+    src: "{{ soft_src }}"
+    dest: "{{ install_path }}"
+    owner: root
+    group: root
+    mode: 0755
+
+- name: Deploy systemd service file
+  template:
+    src: "{{ service_name }}.service.j2"
+    dest: "/etc/systemd/system/{{ service_name }}.service"
+  notify: enable and start {{ service_name }}
+
+- name: Clean up (if any temp files)
+  file:
+    path: "/tmp/{{ archive }}"
+    state: absent
+  ignore_errors: yes

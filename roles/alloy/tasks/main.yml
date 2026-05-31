@@ -1,0 +1,59 @@
+---
+- name: 创建配置目录
+  file:
+    path: "{{ alloy_config_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+
+- name: 分发 Alloy 二进制
+  copy:
+    src: "{{ alloy_local_bin }}"
+    dest: "{{ alloy_install_path }}"
+    owner: root
+    group: root
+    mode: 0755
+
+- name: 修复 SELinux 上下文（避免权限拒绝）
+  command: restorecon -v {{ alloy_install_path }}
+  changed_when: false
+  ignore_errors: yes
+
+- name: 生成 Alloy 配置文件
+  template:
+    src: config.alloy.j2
+    dest: "{{ alloy_config_file }}"
+    owner: root
+    group: root
+    mode: 0644
+  notify: restart alloy
+
+- name: 创建 systemd 服务文件
+  copy:
+    content: |
+      [Unit]
+      Description=Grafana Alloy
+      After=network-online.target
+
+      [Service]
+      User=root
+      Group=root
+      Type=simple
+      Restart=on-failure
+      ExecStart={{ alloy_install_path }} run {{ alloy_config_file }}
+
+      [Install]
+      WantedBy=multi-user.target
+    dest: /etc/systemd/system/alloy.service
+    owner: root
+    group: root
+    mode: 0644
+  notify: restart alloy
+
+- name: 启动并启用 Alloy
+  systemd:
+    name: alloy
+    state: started
+    enabled: yes
+    daemon_reload: yes

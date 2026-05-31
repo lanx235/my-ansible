@@ -1,0 +1,13 @@
+# deploy_alloy_web.yml
+- hosts: webs
+  become: yes
+  vars:
+    log_targets:
+      - path: /var/log/messages
+        job: syslog
+      - path: /var/log/nginx/access.log
+        job: nginx_access
+      - path: /var/log/nginx/error.log
+        job: nginx_error
+  roles:
+    - alloy

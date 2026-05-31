@@ -1,0 +1,11 @@
+---
+- name: restart chronyd
+  service:
+    name: chronyd
+    state: restarted
+  become: yes
+
+- name: refresh yum cache
+  command: yum makecache
+  become: yes
+  changed_when: false

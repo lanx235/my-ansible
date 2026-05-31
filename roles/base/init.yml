@@ -1,0 +1,62 @@
+---
+# Play 1: 初始化控制节点（pubserver）
+# 这里仅做特殊配置，不调用通用 Role
+#ansible-playbook -i inventory.ini init.yml -u root --ask-pass
+#第一次用root执行
+- name: 初始化控制节点环境
+  hosts: pubserver
+  gather_facts: yes
+  vars:
+    configure_yum_repos: false
+    configure_ntp_client: false
+  tasks:
+    - name: 创建用户和权限
+      include_role:
+        name: users
+
+    - name: 为 alice 生成 SSH 密钥对（无密码）
+      user:
+        name: alice
+        generate_ssh_key: yes
+        ssh_key_bits: 2048
+        ssh_key_file: .ssh/id_rsa
+      become: yes
+      become_user: alice
+
+    - name: 配置 NTP 服务端
+      blockinfile:
+        path: /etc/chrony.conf
+        block: |
+          pool ntp.aliyun.com iburst
+          allow 0.0.0.0/0
+      become: yes
+      notify: restart chronyd
+
+    - name: 安装并启动 chrony
+      package:
+        name: chrony
+        state: present
+      become: yes
+    - service:
+        name: chronyd
+        state: started
+        enabled: yes
+      become: yes
+
+  handlers:
+    - name: restart chronyd
+      service:
+        name: chronyd
+        state: restarted
+      become: yes
+
+# Play 2: 初始化所有被管节点（先用户，后基础环境）
+- name: 被管节点 - 用户权限初始化
+  hosts: all:!pubserver
+  roles:
+    - users
+
+- name: 被管节点 - 基础环境配置
+  hosts: all:!pubserver
+  roles:
+    - base

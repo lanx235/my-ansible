@@ -1,0 +1,123 @@
+---
+- name: Install Nginx, MariaDB, PHP and required packages
+  yum:
+    name:
+      - nginx
+      - mariadb-server
+      - php
+      - php-fpm
+      - php-mysqlnd
+      - php-json
+      - php-gd
+      - php-xml
+      - php-mbstring
+    state: present
+
+- name: Install PyMySQL for MySQL module
+  dnf:
+    name: python3-PyMySQL
+    state: present
+
+- name: Create web root directory
+  file:
+    path: /var/www/html
+    state: directory
+    owner: nginx
+    group: nginx
+    mode: '0755'
+
+- name: Deploy Nginx configuration (with static/dynamic separation)
+  template:
+    src: nginx.conf.j2
+    dest: /etc/nginx/conf.d/default.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart nginx
+
+- name: Deploy PHP-FPM pool configuration (use nginx user)
+  template:
+    src: www.conf.j2
+    dest: /etc/php-fpm.d/www.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart php-fpm
+
+- name: Ensure services are started and enabled
+  systemd:
+    name: "{{ item }}"
+    state: started
+    enabled: yes
+  loop:
+    - "{{ nginx_service }}"
+    - "{{ mariadb_service }}"
+    - "{{ php_fpm_service }}"
+
+- name: Set MariaDB root password
+  mysql_user:
+    name: root
+    host: localhost
+    password: "{{ mysql_root_password }}"
+    login_unix_socket: /var/lib/mysql/mysql.sock
+    state: present
+  no_log: true
+
+- name: Remove anonymous MySQL users
+  mysql_user:
+    name: ''
+    host: '{{ item }}'
+    state: absent
+    login_user: root
+    login_password: "{{ mysql_root_password }}"
+  loop:
+    - localhost
+    - test
+  no_log: true
+
+- name: Disallow remote root login
+  mysql_user:
+    name: root
+    host: '{{ item }}'
+    state: absent
+    login_user: root
+    login_password: "{{ mysql_root_password }}"
+  loop:
+    - '::1'
+    - '127.0.0.1'
+    - '%'
+  no_log: true
+
+- name: Remove default test database
+  mysql_db:
+    name: test
+    state: absent
+    login_user: root
+    login_password: "{{ mysql_root_password }}"
+
+- name: Create a test PHP info file (optional)
+  copy:
+    content: "<?php phpinfo(); ?>"
+    dest: /var/www/html/info.php
+    owner: nginx
+    group: nginx
+    mode: '0644'
+
+- name: Configure firewall to allow HTTP (if enabled)
+  firewalld:
+    service: http
+    permanent: yes
+    state: enabled
+    immediate: yes
+  when: configure_firewall | bool
+
+- name: Set SELinux booleans for web and database (if enabled)
+  seboolean:
+    name: "{{ item }}"
+    state: yes
+    persistent: yes
+  loop:
+    - httpd_can_network_connect
+    - httpd_execmem
+  when: configure_selinux | bool
+  notify: restart php-fpm

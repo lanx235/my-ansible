@@ -1,0 +1,9 @@
+---
+archive: "node_exporter-1.11.1.linux-amd64.tar.gz"
+binary: "node_exporter"
+exporter_port: 9100
+user: "node_exporter"
+extra_args: ""
+soft_src: "/home/alice/soft/{{ archive }}"
+install_path: "/usr/local/bin/{{ binary }}"
+service_name: "node_exporter"

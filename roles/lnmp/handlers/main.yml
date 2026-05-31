@@ -1,0 +1,16 @@
+---
+- name: restart nginx
+  systemd:
+    name: "{{ nginx_service }}"
+    state: restarted
+    daemon_reload: yes
+
+- name: restart php-fpm
+  systemd:
+    name: "{{ php_fpm_service }}"
+    state: restarted
+
+- name: restart mariadb
+  systemd:
+    name: "{{ mariadb_service }}"
+    state: restarted

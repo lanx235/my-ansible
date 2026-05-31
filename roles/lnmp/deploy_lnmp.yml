@@ -1,0 +1,10 @@
+---
+- name: Deploy LNMP on test host
+  hosts: test
+  become: yes
+  roles:
+    - lnmp
+  vars:
+    mysql_root_password: "123456" 
+    configure_firewall: false
+    configure_selinux: false

@@ -1,0 +1,18 @@
+local.file_match "logs" {
+  path_targets = [
+    {% for t in log_targets %}
+    {"__path__" = "{{ t.path }}", "job" = "{{ t.job }}", "host" = "{{ inventory_hostname }}"}{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ]
+}
+
+loki.source.file "logs" {
+  targets    = local.file_match.logs.targets
+  forward_to = [loki.write.default.receiver]
+}
+
+loki.write "default" {
+  endpoint {
+    url = "{{ loki_endpoint }}"
+  }
+}

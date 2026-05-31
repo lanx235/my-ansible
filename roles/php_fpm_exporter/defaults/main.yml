@@ -1,0 +1,23 @@
+---
+# 软件包（注意：v1.2.1 是单文件二进制，不是 tar.gz）
+archive: "php-fpm_exporter_1.2.1_linux_amd64"
+binary: "php-fpm_exporter"
+
+# 服务配置
+exporter_port: 9253
+user: "php-fpm-exporter"
+service_name: "php_fpm_exporter"
+
+# 启动参数：子命令 + 直连 FastCGI
+# PHP-FPM 状态路径，默认 /fpm-status
+php_fpm_status_path: "/fpm-status"
+# PHP-FPM 监听方式，可覆盖为 unix:///var/run/php-fpm/www.sock 或 tcp://127.0.0.1:9000
+php_fpm_listen: "unix:///run/php-fpm/www.sock"
+# 拼接完整 scrape-uri，注意 socket 用 ; 分隔
+scrape_uri: "{{ php_fpm_listen }};{{ php_fpm_status_path }}"
+# 执行命令前缀（v1.2.1+ 需要 server 子命令）
+exec_prefix: "server"
+
+# 路径
+soft_src: "/home/alice/soft/{{ archive }}"
+install_path: "/usr/local/bin/{{ binary }}"

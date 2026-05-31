@@ -1,0 +1,27 @@
+---
+- name: 创建运维用户 {{ admin_user }}
+  user:
+    name: "{{ admin_user }}"
+    password: "{{ admin_password | password_hash('sha512') }}"
+    state: present
+    shell: /bin/bash
+    createhome: yes
+  become: yes
+  when: configure_admin_user | bool
+
+- name: 配置 sudo 免密提权
+  lineinfile:
+    path: /etc/sudoers
+    line: "{{ admin_user }} ALL=(ALL) NOPASSWD: ALL"
+    state: present
+    validate: 'visudo -cf %s'
+  become: yes
+  when: configure_sudo_nopasswd | bool
+
+- name: 推送运维用户 SSH 公钥
+  authorized_key:
+    user: "{{ admin_user }}"
+    key: "{{ lookup('file', admin_ssh_pubkey) }}"
+    state: present
+  become: yes
+  when: configure_ssh_key | bool

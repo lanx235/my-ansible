@@ -1,0 +1,8 @@
+---
+admin_user: alice
+admin_password: "123456"                      # 务必用 ansible-vault 加密
+admin_ssh_pubkey: "/home/alice/.ssh/id_rsa.pub"
+
+configure_admin_user: true
+configure_sudo_nopasswd: true
+configure_ssh_key: true

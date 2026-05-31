@@ -1,0 +1,12 @@
+---
+# NTP 服务器地址
+ntp_server: "{{ hostvars['pubserver']['ansible_host'] | default('pubserver') }}"
+
+# YUM 源相关
+yum_repo_src: "/etc/yum.repos.d/mydvd.repo"
+yum_repo_dest: "/etc/yum.repos.d/mydvd.repo"
+
+# 功能开关
+configure_yum_repos: true
+configure_ntp_client: true
+clean_old_repos: true

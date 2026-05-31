@@ -1,0 +1,15 @@
+---
+# PHP 相关包
+php_packages:
+  - php
+  - php-fpm
+  - php-mysqlnd
+  - php-json
+  - php-gd
+  - php-xml
+  - php-mbstring
+
+# 服务名称
+nginx_service: nginx
+mariadb_service: mariadb
+php_fpm_service: php-fpm

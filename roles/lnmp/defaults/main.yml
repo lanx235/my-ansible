@@ -1,0 +1,9 @@
+---
+# 默认 MariaDB root 密码（请务必在生产环境覆盖此变量）
+mysql_root_password: "123456"
+
+# 是否配置防火墙（开放 80 端口）
+configure_firewall: false
+
+# 是否配置 SELinux 布尔值
+configure_selinux: false

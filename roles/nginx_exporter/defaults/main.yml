@@ -1,0 +1,9 @@
+---
+archive: "nginx-prometheus-exporter_1.5.1_linux_amd64.tar.gz"
+binary: "nginx-prometheus-exporter"
+exporter_port: 9113
+user: "nginx-exporter"
+extra_args: "-nginx.scrape-uri=http://127.0.0.1:8080/nginx_status"
+soft_src: "/home/alice/soft/{{ archive }}"
+install_path: "/usr/local/bin/{{ binary }}"
+service_name: "nginx_exporter"
