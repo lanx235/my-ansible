@@ -1,0 +1,17 @@
+---
+- name: 从首节点拉取 ceph 公钥到控制机临时目录
+  fetch:
+    src: /etc/ceph/ceph.pub
+    dest: /tmp/ceph.pub
+    flat: yes
+
+- name: 将公钥写入其他 Ceph 节点
+  authorized_key:
+    user: root
+    key: "{{ lookup('file', '/tmp/ceph.pub') }}"
+    state: present
+  loop: "{{ ceph_nodes }}"
+  loop_control:
+    loop_var: node
+  delegate_to: "{{ node.ip }}"
+  when: node.name != ceph_nodes[0].name

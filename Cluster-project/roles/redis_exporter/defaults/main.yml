@@ -1,0 +1,20 @@
+---
+# 软件包信息
+exporter_version: "1.85.0"
+archive: "redis_exporter-v{{ exporter_version }}.linux-amd64.tar.gz"
+binary: "redis_exporter"
+
+# 服务配置
+exporter_port: 9121
+user: "redis_exporter"
+service_name: "redis_exporter"
+
+# Redis 连接配置（Unix Socket 模式）
+redis_socket_path: "/var/run/redis/redis.sock"
+redis_addr: "unix://{{ redis_socket_path }}"
+redis_password: "123456"
+connection_timeout: "5s"
+
+# 路径（由控制节点 soft 目录拼接）
+soft_src: "/var/ftp/soft/{{ archive }}"
+install_path: "/usr/local/bin/{{ binary }}"

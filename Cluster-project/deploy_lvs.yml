@@ -1,0 +1,53 @@
+---
+# ============================================================
+# 剧本：部署 LVS + Keepalived 高可用入口
+# 用法：
+#   1. 直接修改下面 vars 块中的变量值（适合固定环境）
+#   2. 使用 -e 参数临时覆盖，例如：
+#      ansible-playbook deploy_lvs.yml -e "vip_outer=200.0.0.50"
+#   3. 也可通过 inventory 或 group_vars 覆盖
+# ============================================================
+
+- name: 部署 LVS + Keepalived
+  hosts: lvs
+  become: yes
+
+  vars:
+    # ==================== 部署变量（请根据实际环境修改） ====================
+    # 外网 VIP（客户端访问 Web 服务的入口）
+    vip_outer: "200.0.0.100"
+    # 内网 VIP（供内部服务使用，如 ProxySQL 入口）
+    vip_inner: "192.168.1.200"
+    
+    # 网卡名称（通过 ip link 或 nmcli device status 查看实际名称）
+    interface_outer: "ens224"          # 外网网卡（配置外网 VIP）
+    interface_inner: "ens160"          # 内网网卡（配置内网 VIP）
+    
+    # VRRP 配置
+    router_id: 51
+    auth_pass: "1111"
+    
+    # 主备节点主机名（用于自动计算 role 和 priority）
+    lvs_master_host: "lvs1"    # MASTER 节点的主机名
+    lvs_backup_host: "lvs2"    # BACKUP 节点的主机名
+    
+    # 调度算法（rr=轮询, wrr=加权轮询, wlc=最少连接）
+    lb_algo: "rr"
+    # 转发模式（NAT / DR / TUN）
+    lb_kind: "DR"                     # 您的环境使用 DR 模式
+    
+    # 后端 Web 服务器列表(公网)
+    real_servers:
+      - ip: 200.0.0.21
+        weight: 1
+      - ip: 200.0.0.22
+        weight: 1
+      - ip: 200.0.0.23
+        weight: 1
+    
+    # ==================== 自动计算变量（无需修改） ====================
+    role: "{{ 'MASTER' if inventory_hostname == lvs_master_host else 'BACKUP' }}"
+    priority: "{{ 100 if inventory_hostname == lvs_master_host else 90 }}"
+
+  roles:
+    - lvs

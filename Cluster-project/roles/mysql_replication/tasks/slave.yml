@@ -1,0 +1,8 @@
+---
+# 如果需要，可以在这里设置额外从库参数，read_only 已在 my.cnf 中配置
+- name: 确保从库数据目录权限正确
+  file:
+    path: "{{ mysql_datadir }}"
+    owner: mysql
+    group: mysql
+    state: directory

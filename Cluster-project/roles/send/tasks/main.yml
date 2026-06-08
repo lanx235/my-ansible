@@ -1,0 +1,27 @@
+---
+- name: 确保 Web 根目录存在
+  file:
+    path: "{{ web_root }}"
+    state: directory
+    owner: nginx
+    group: nginx
+    mode: '0755'
+
+- name: 删除旧的测试页面（确保强制覆盖）
+  file:
+    path: "{{ web_root }}/{{ test_page }}"
+    state: absent
+
+- name: 分发测试页面
+  copy:
+    src: "{{ test_page }}"
+    dest: "{{ web_root }}/{{ test_page }}"
+    owner: nginx
+    group: nginx
+    mode: '0644'
+
+- name: 确保 PHP-FPM 已重载
+  systemd:
+    name: php-fpm
+    state: reloaded
+  changed_when: false

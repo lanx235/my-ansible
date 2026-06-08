@@ -1,0 +1,23 @@
+# {{ ansible_managed }}
+bind {{ redis_bind }}
+port {{ redis_port }}
+# systemd 管理，必须设为 no
+daemonize no
+pidfile /var/run/redis/redis.pid
+logfile /var/log/redis/redis.log
+dir /var/lib/redis
+
+# 密码认证
+requirepass {{ redis_requirepass }}
+masterauth {{ redis_masterauth }}
+
+# RDB 持久化
+{% for spec in redis_save %}
+save {{ spec }}
+{% endfor %}
+
+# AOF 持久化
+appendonly {{ redis_appendonly }}
+appendfsync {{ redis_appendfsync }}
+auto-aof-rewrite-percentage 100
+auto-aof-rewrite-min-size 64mb

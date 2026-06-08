@@ -1,0 +1,4 @@
+- hosts: webs
+  become: yes
+  roles:
+    - node_exporter

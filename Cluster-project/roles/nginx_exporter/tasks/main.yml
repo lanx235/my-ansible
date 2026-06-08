@@ -1,0 +1,51 @@
+---
+- name: 检查 Nginx stub_status 是否可访问
+  uri:
+    url: "{{ stub_status_url }}"
+    method: GET
+    status_code: 200
+  register: stub_check
+  ignore_errors: yes
+
+- name: 断言 stub_status 可用
+  fail:
+    msg: >
+      Nginx stub_status 不可访问！
+      请先在目标主机上配置 nginx_status endpoint，
+      例如创建 /etc/nginx/conf.d/status.conf 并重载 Nginx。
+  when: stub_check is failed
+
+- name: Create {{ user }} user
+  user:
+    name: "{{ user }}"
+    system: yes
+    shell: /bin/false
+    create_home: no
+
+- name: Extract {{ archive }} to /tmp
+  unarchive:
+    src: "{{ soft_src }}"
+    dest: /tmp
+
+- name: Find and copy binary to {{ install_path }}
+  shell: |
+    find /tmp -type f -name "{{ binary }}" | head -1 | xargs -I {} cp {} {{ install_path }}
+  args:
+    creates: "{{ install_path }}"
+
+- name: Set binary permissions
+  file:
+    path: "{{ install_path }}"
+    owner: root
+    group: root
+    mode: 0755
+
+- name: Deploy systemd service file
+  template:
+    src: "{{ service_name }}.service.j2"
+    dest: "/etc/systemd/system/{{ service_name }}.service"
+  notify: enable and start {{ service_name }}
+
+- name: Clean up temp files
+  shell: rm -rf /tmp/{{ archive | replace('.tar.gz','') }}*
+  ignore_errors: yes

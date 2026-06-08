@@ -1,0 +1,83 @@
+#file proxysql.cfg
+# Managed by Ansible, do not edit manually
+
+datadir="{{ proxysql_datadir }}"
+errorlog="{{ proxysql_errorlog }}"
+
+admin_variables=
+{
+    admin-restapi_enabled="{{ proxysql_restapi_enabled }}"
+    admin-restapi_port="{{ proxysql_restapi_port }}"
+
+    admin_credentials="{{ proxysql_local_admin }};{{ proxysql_remote_admin_user }}:{{ proxysql_remote_admin_pass }}"
+    mysql_ifaces="{{ proxysql_admin_ifaces }}"
+{% if proxysql_cluster_enabled %}
+    admin-cluster_enabled="1"
+    cluster_username="{{ proxysql_remote_admin_user }}"
+    cluster_password="{{ proxysql_remote_admin_pass }}"
+{% endif %}
+}
+
+mysql_variables=
+{
+    threads={{ proxysql_threads }}
+    max_connections={{ proxysql_max_connections }}
+    default_query_delay={{ proxysql_default_query_delay }}
+    default_query_timeout={{ proxysql_default_query_timeout }}
+    have_compress={{ proxysql_have_compress }}
+    poll_timeout={{ proxysql_poll_timeout }}
+    interfaces="{{ proxysql_client_ifaces }}"
+    default_schema="{{ proxysql_default_schema }}"
+    stacksize={{ proxysql_stacksize }}
+    server_version="{{ proxysql_server_version }}"
+    connect_timeout_server={{ proxysql_connect_timeout_server }}
+    monitor_username="{{ proxysql_monitor_user }}"
+    monitor_password="{{ proxysql_monitor_pass }}"
+    monitor_history={{ proxysql_monitor_history }}
+    monitor_connect_interval={{ proxysql_monitor_connect_interval }}
+    monitor_ping_interval={{ proxysql_monitor_ping_interval }}
+    monitor_read_only_interval={{ proxysql_monitor_read_only_interval }}
+    monitor_read_only_timeout={{ proxysql_monitor_read_only_timeout }}
+    ping_interval_server_msec={{ proxysql_ping_interval_server_msec }}
+    ping_timeout_server={{ proxysql_ping_timeout_server }}
+    commands_stats={{ proxysql_commands_stats }}
+    sessions_sort={{ proxysql_sessions_sort }}
+    connect_retries_on_failure={{ proxysql_connect_retries_on_failure }}
+}
+
+mysql_servers =
+(
+{% for server in proxysql_backend_servers %}
+    { address="{{ server.hostname }}" , port={{ server.port }} , hostgroup={{ server.hostgroup }} , max_connections={{ server.max_connections | default(100) }} , comment="{{ server.comment }}" }{% if not loop.last %},{% endif %}
+{% endfor %}
+)
+
+mysql_users =
+(
+{% for user in proxysql_mysql_users %}
+    { username = "{{ user.username }}" , password = "{{ user.password }}" , default_hostgroup = {{ user.default_hostgroup }} , transaction_persistent = {{ user.transaction_persistent | default(1) }} , active = 1 }{% if not loop.last %},{% endif %}
+{% endfor %}
+)
+
+mysql_query_rules =
+(
+{% for rule in proxysql_query_rules %}
+    { rule_id = {{ rule.rule_id }} , active = 1 , match_digest = "{{ rule.match_digest }}" , destination_hostgroup = {{ rule.destination_hostgroup }} , apply = {{ rule.apply }} , comment = "{{ rule.comment }}" }{% if not loop.last %},{% endif %}
+{% endfor %}
+)
+
+mysql_replication_hostgroups =
+(
+{% for hg in proxysql_replication_hostgroups %}
+    { writer_hostgroup = {{ hg.writer }} , reader_hostgroup = {{ hg.reader }} , comment = "{{ hg.comment }}" }{% if not loop.last %},{% endif %}
+{% endfor %}
+)
+
+{% if proxysql_cluster_enabled %}
+proxysql_servers =
+(
+{% for node in proxysql_cluster_nodes %}
+    { hostname = "{{ node.hostname }}" , port = {{ node.port }} , weight = {{ node.weight }} , comment = "{{ node.comment }}" }{% if not loop.last %},{% endif %}
+{% endfor %}
+)
+{% endif %}

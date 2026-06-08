@@ -1,0 +1,12 @@
+---
+- name: 安装 Nginx、PHP-FPM 及必要扩展
+  yum:
+    name:
+      - nginx
+      - php-fpm
+      - php-mysqlnd
+      - php-gd
+      - php-mbstring
+      - php-xml
+      - php-zip
+    state: present

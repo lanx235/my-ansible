@@ -1,0 +1,12 @@
+[Unit]
+Description=PHP-FPM Prometheus Exporter
+After=network.target
+
+[Service]
+Type=simple
+User={{ user }}
+ExecStart={{ install_path }} {{ exec_prefix }} --phpfpm.scrape-uri='{{ scrape_uri }}' --web.listen-address=0.0.0.0:{{ exporter_port }}
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

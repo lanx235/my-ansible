@@ -1,0 +1,6 @@
+---
+- name: 推送新的 LVS 规则
+  template:
+    src: lvs_rules.conf.j2
+    dest: /etc/keepalived/conf.d/lvs.conf
+  notify: reload keepalived

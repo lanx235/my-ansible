@@ -1,0 +1,10 @@
+---
+# 目标 Web 根目录
+web_root: /usr/share/nginx/html
+# 测试页面文件名
+test_page: demo_cache_db.php
+# 是否需要安装 Redis 扩展（Predis 通过 Composer）
+install_redis_libs: true
+# 是否安装 Predis（如果为 false，则使用 phpredis 扩展的 Sentinel 接口）
+use_predis: true---
+# defaults file for roles/send

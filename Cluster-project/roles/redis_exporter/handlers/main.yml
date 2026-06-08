@@ -1,0 +1,13 @@
+---
+- name: restart redis
+  systemd:
+    name: redis
+    state: restarted
+  listen: "restart redis"
+
+- name: restart redis_exporter
+  systemd:
+    name: "{{ service_name }}"
+    state: restarted
+    daemon_reload: yes
+  listen: "restart redis_exporter"

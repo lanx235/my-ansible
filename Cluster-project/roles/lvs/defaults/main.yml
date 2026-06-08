@@ -1,0 +1,18 @@
+---
+vip_outer: "200.0.0.100"
+vip_inner: "192.168.1.200"
+interface_outer: "eth1"
+interface_inner: "eth0"
+router_id: 51
+auth_pass: "1111"
+lvs_master_host: "lvs-master"
+lvs_backup_host: "lvs-backup"
+lb_algo: "rr"
+lb_kind: "DR"
+real_servers:
+  - ip: 192.168.1.21
+    weight: 1
+  - ip: 192.168.1.22
+    weight: 1
+  - ip: 192.168.1.23
+    weight: 1

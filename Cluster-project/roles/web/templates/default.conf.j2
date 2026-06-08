@@ -1,0 +1,25 @@
+server {
+    listen       80;
+    server_name  _;
+    root   {{ web_root }};
+    index  index.php index.html index.htm;
+
+    # 静态文件直接返回（缓存 30 天）
+    location ~* \.(html|css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # PHP 请求通过 Unix Socket 转发至 PHP-FPM
+    location ~ \.php$ {
+        fastcgi_pass   unix:/run/php-fpm/www.sock;
+        fastcgi_index  index.php;
+        fastcgi_param  SCRIPT_FILENAME  $document_root$fastcgi_script_name;
+        include        fastcgi_params;
+    }
+
+    # 禁止访问隐藏文件
+    location ~ /\. {
+        deny all;
+    }
+}

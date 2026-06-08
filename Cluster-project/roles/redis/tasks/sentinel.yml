@@ -1,0 +1,15 @@
+---
+- name: 推送 Sentinel 配置文件
+  template:
+    src: redis-sentinel.conf.j2
+    dest: /etc/redis/sentinel.conf
+    owner: redis
+    group: redis
+    mode: '0640'
+  notify: restart redis-sentinel
+
+- name: 启动 Redis Sentinel 并设置开机自启
+  systemd:
+    name: redis-sentinel
+    state: started
+    enabled: yes

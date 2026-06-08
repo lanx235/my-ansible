@@ -1,0 +1,17 @@
+
+virtual_server {{ vip_outer }} 80 {
+    delay_loop 6
+    lb_algo {{ lb_algo }}
+    lb_kind {{ lb_kind }}
+    protocol TCP
+{% for server in real_servers %}
+    real_server {{ server.ip }} 80 {
+        weight {{ server.weight }}
+        TCP_CHECK {
+            connect_timeout 3
+            nb_get_retry 3
+            delay_before_retry 3
+        }
+    }
+{% endfor %}
+}

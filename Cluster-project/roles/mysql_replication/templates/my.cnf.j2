@@ -1,0 +1,19 @@
+[server]
+[mysqld]
+server-id = {% if inventory_hostname == mysql_master_host %}1{% else %}{{ (ansible_hostname | hash('md5') | int(0,16) % 250) + 2 }}{% endif %}
+
+{% if inventory_hostname == mysql_master_host and mysql_enable_binlog %}
+log-bin = mysql-bin
+binlog-format = ROW
+{% endif %}
+
+{% if inventory_hostname != mysql_master_host and mysql_slave_read_only %}
+read_only = 1
+relay-log = /var/lib/mysql/relay-bin
+{% endif %}
+
+datadir = {{ mysql_datadir }}
+socket = /var/lib/mysql/mysql.sock
+
+[client]
+socket = /var/lib/mysql/mysql.sock

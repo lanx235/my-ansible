@@ -1,0 +1,22 @@
+
+! ============================================================
+! Keepalived 核心配置（DR 模式）
+! ============================================================
+global_defs {
+   router_id LVS_{{ router_id }}
+}
+vrrp_instance VI_1 {
+    state {{ role }}
+    interface {{ interface_outer }}
+    virtual_router_id {{ router_id }}
+    priority {{ priority }}
+    advert_int 1
+    authentication {
+        auth_type PASS
+        auth_pass {{ auth_pass }}
+    }
+    virtual_ipaddress {
+        {{ vip_outer }}/24
+    }
+}
+include /etc/keepalived/conf.d/*.conf

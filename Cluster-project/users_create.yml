@@ -1,0 +1,57 @@
+---
+- name: 在 MariaDB 主库上创建 ProxySQL 所需的用户及数据库
+  hosts: sql1
+  become: yes
+  gather_facts: yes
+
+  vars:
+    # 数据库名称（应用程序使用的数据库）
+    app_database: "myapp_db"
+    # 监控用户（用于 ProxySQL 健康检查）
+    monitor_user: "monitor"
+    monitor_password: "123456"
+    # 业务用户（应用程序连接使用）
+    app_user: "app_user"
+    app_password: "123456"
+    # 允许访问的网段（ProxySQL 节点所在网段，根据实际修改）
+    allowed_network: "192.168.1.%"
+    # 或允许所有（不推荐生产）
+    # allowed_network: "%"
+
+  tasks:
+    - name: 确保 MySQL 服务已启动（等待 socket 就绪）
+      wait_for:
+        path: /var/lib/mysql/mysql.sock
+        timeout: 30
+
+    - name: 创建监控用户（授权 REPLICATION CLIENT 和 PROCESS 权限）
+      community.mysql.mysql_user:
+        name: "{{ monitor_user }}"
+        password: "{{ monitor_password }}"
+        host: "{{ item }}"
+        priv: "*.*:REPLICATION CLIENT,PROCESS"
+        state: present
+        login_unix_socket: /var/lib/mysql/mysql.sock
+      loop:
+        - "localhost"
+        - "{{ allowed_network }}"
+
+    - name: 创建业务数据库
+      community.mysql.mysql_db:
+        name: "{{ app_database }}"
+        state: present
+        login_unix_socket: /var/lib/mysql/mysql.sock
+
+    - name: 创建业务用户（授权对应数据库的完整权限）
+      community.mysql.mysql_user:
+        name: "{{ app_user }}"
+        password: "{{ app_password }}"
+        host: "{{ allowed_network }}"
+        priv: "{{ app_database }}.*:SELECT,INSERT,UPDATE,DELETE,CREATE,ALTER,DROP,INDEX"
+        state: present
+        login_unix_socket: /var/lib/mysql/mysql.sock
+
+    - name: 刷新权限使其立即生效
+      community.mysql.mysql_query:
+        login_unix_socket: /var/lib/mysql/mysql.sock
+        query: "FLUSH PRIVILEGES;"

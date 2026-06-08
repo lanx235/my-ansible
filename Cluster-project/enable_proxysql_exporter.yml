@@ -1,0 +1,43 @@
+---
+- name: 批量开启 ProxySQL 内置 Prometheus Exporter
+  hosts: lvs          # 你的 ProxySQL 主机组名
+  gather_facts: no
+  vars:
+    proxysql_admin_user: "cluster_user"
+    proxysql_admin_password: "123456"   # 替换为实际密码
+    restapi_port: 6070
+
+  tasks:
+    # 使用 ansible_host（实际 IP）连接，避免主机名解析问题
+    - name: 执行 SQL 开启 restapi 并设置端口
+      shell: |
+        mysql -h {{ ansible_host }} -P 6032 -u {{ proxysql_admin_user }} -p{{ proxysql_admin_password }} -e "
+        SET admin-restapi_enabled='true';
+        SET admin-restapi_port={{ restapi_port }};
+        LOAD ADMIN VARIABLES TO RUNTIME;
+        SAVE ADMIN VARIABLES TO DISK;
+        "
+      delegate_to: localhost
+      register: sql_result
+      changed_when: "'Query OK' in sql_result.stdout"
+
+    - name: 等待 Exporter 端口 {{ restapi_port }} 可访问
+      wait_for:
+        port: "{{ restapi_port }}"
+        host: "{{ ansible_host }}"
+        timeout: 10
+      delegate_to: localhost
+
+    - name: 验证 metrics 端点
+      uri:
+        url: "http://{{ ansible_host }}:{{ restapi_port }}/metrics"
+        status_code: 200
+      register: metrics_check
+      until: metrics_check.status == 200
+      retries: 5
+      delay: 2
+      delegate_to: localhost
+
+    - name: 输出成功信息
+      debug:
+        msg: "ProxySQL Exporter 已启用，端点: http://{{ ansible_host }}:{{ restapi_port }}/metrics"

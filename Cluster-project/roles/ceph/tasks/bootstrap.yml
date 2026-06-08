@@ -1,0 +1,30 @@
+---
+- name: 上传 cephadm 脚本
+  copy:
+    src: cephadm
+    dest: "{{ cephadm_path }}"
+    mode: '0755'
+
+- name: 构造最终使用的镜像地址
+  set_fact:
+    final_ceph_image: >-
+      {% if use_private_registry %}
+      {{ private_registry_host }}:{{ private_registry_port }}/ceph/ceph:v17
+      {% else %}
+      {{ ceph_public_image }}
+      {% endif %}
+
+- name: 执行 cephadm bootstrap
+  shell: |
+    export CEPHADM_IMAGE="{{ final_ceph_image | trim }}"
+    {{ cephadm_path }} bootstrap \
+      --mon-ip {{ ceph_mon_ip }} \
+      --initial-dashboard-password {{ ceph_dashboard_password }} \
+      --dashboard-password-noupdate
+  args:
+    creates: /etc/ceph/ceph.conf
+
+- name: 安装 ceph-common 客户端工具
+  yum:
+    name: ceph-common
+    state: present

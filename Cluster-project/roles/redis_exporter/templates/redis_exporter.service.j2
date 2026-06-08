@@ -1,0 +1,19 @@
+[Unit]
+Description=Prometheus Redis Exporter
+After=network.target
+
+[Service]
+User={{ user }}
+Group={{ user }}
+Type=simple
+Restart=on-failure
+Environment="REDIS_ADDR={{ redis_addr }}"
+{% if redis_password != "" %}
+Environment="REDIS_PASSWORD={{ redis_password }}"
+{% endif %}
+ExecStart={{ install_path }} \
+    --web.listen-address=0.0.0.0:{{ exporter_port }} \
+    --connection-timeout={{ connection_timeout }}
+
+[Install]
+WantedBy=multi-user.target

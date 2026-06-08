@@ -1,0 +1,27 @@
+---
+- name: 部署 ProxySQL 集群
+  hosts: lvs
+  become: yes
+  vars:
+    proxysql_datadir: "/var/lib/proxysql"
+    proxysql_admin_ifaces: "0.0.0.0:6032"
+    proxysql_client_ifaces: "0.0.0.0:6033"
+    proxysql_remote_admin_user: "cluster_user"
+    proxysql_remote_admin_pass: "123456"
+    proxysql_monitor_user: "monitor"
+    proxysql_monitor_pass: "123456"
+    proxysql_backend_servers:
+      - { hostname: "192.168.1.31", port: 3306, hostgroup: 0, max_connections: 100, comment: "master" }
+      - { hostname: "192.168.1.32", port: 3306, hostgroup: 1, max_connections: 100, comment: "slave1" }
+    proxysql_mysql_users:
+      - { username: "app_user", password: "123456", default_hostgroup: 0, transaction_persistent: 1 }
+      - { username: "monitor", password: "123456", default_hostgroup: 0, transaction_persistent: 1 }
+    proxysql_query_rules:
+      - { rule_id: 1, match_digest: '^SELECT.*FOR UPDATE$', destination_hostgroup: 0, apply: 1, comment: "加锁读 -> 主库" }
+      - { rule_id: 2, match_digest: '^SELECT', destination_hostgroup: 1, apply: 1, comment: "普通查询 -> 从库" }
+    proxysql_cluster_enabled: true
+    proxysql_cluster_nodes:
+      - { hostname: "192.168.1.10", port: 6032, weight: 1, comment: "lvs1" }
+      - { hostname: "192.168.1.11", port: 6032, weight: 1, comment: "lvs2" }
+  roles:
+    - proxysql

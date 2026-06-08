@@ -1,0 +1,39 @@
+---
+- name: 等待主库可访问
+  wait_for:
+    host: "{{ hostvars[mysql_master_host]['ansible_host'] }}"
+    port: 3306
+    timeout: 60
+
+- name: 重置从库复制信息（清理旧状态）
+  community.mysql.mysql_replication:
+    mode: resetreplicaall
+    login_unix_socket: /var/lib/mysql/mysql.sock
+  ignore_errors: yes
+
+- name: 配置从库连接主库
+  community.mysql.mysql_replication:
+    mode: changeprimary
+    master_host: "{{ hostvars[mysql_master_host]['ansible_host'] }}"
+    master_user: "{{ mysql_repl_user }}"
+    master_password: "{{ mysql_repl_password }}"
+    master_log_file: "{{ hostvars[mysql_master_host]['master_status']['File'] }}"
+    master_log_pos: "{{ hostvars[mysql_master_host]['master_status']['Position'] }}"
+    login_unix_socket: /var/lib/mysql/mysql.sock
+  register: replication_change
+
+- name: 启动从库复制
+  community.mysql.mysql_replication:
+    mode: startreplica
+    login_unix_socket: /var/lib/mysql/mysql.sock
+  when: replication_change is changed
+
+- name: 验证复制状态
+  community.mysql.mysql_replication:
+    mode: getreplica
+    login_unix_socket: /var/lib/mysql/mysql.sock
+  register: slave_status
+
+- name: 显示复制状态
+  debug:
+    msg: "Slave_IO_Running: {{ slave_status.Slave_IO_Running }}, Slave_SQL_Running: {{ slave_status.Slave_SQL_Running }}"

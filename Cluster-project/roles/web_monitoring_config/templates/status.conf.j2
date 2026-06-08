@@ -1,0 +1,20 @@
+server {
+    listen {{ status_listen }};
+    server_name localhost;
+
+    location /nginx_status {
+        stub_status on;
+        access_log off;
+        allow 127.0.0.1;
+        deny all;
+    }
+
+    location /fpm-status {
+        fastcgi_pass {{ php_fpm_listen }};
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        include fastcgi_params;
+        access_log off;
+        allow 127.0.0.1;
+        deny all;
+    }
+}

@@ -1,0 +1,33 @@
+---
+- name: 安装依赖软件包
+  yum:
+    name:
+      - podman
+      - lvm2
+      - python39
+      - chrony
+    state: present
+
+- name: 启动 chronyd 时间同步
+  systemd:
+    name: chronyd
+    state: started
+    enabled: yes
+
+- name: 配置 Podman 信任私有仓库（仅当使用私有仓库时）
+  when: use_private_registry | bool
+  block:
+    - name: 确保 /etc/containers 目录存在
+      file:
+        path: /etc/containers
+        state: directory
+        mode: '0755'
+
+    - name: 添加私有仓库为 insecure registry
+      blockinfile:
+        path: /etc/containers/registries.conf
+        block: |
+          [[registry]]
+          location = "{{ private_registry_host }}:{{ private_registry_port }}"
+          insecure = true
+        marker: "# {mark} ANSIBLE MANAGED - private registry"

@@ -1,0 +1,40 @@
+---
+- name: 安装 MariaDB 软件包
+  yum:
+    name: "{{ mysql_packages }}"
+    state: present
+
+- name: 启动并启用 mariadb 服务
+  systemd:
+    name: mariadb
+    state: started
+    enabled: yes
+
+- name: 设置 root 密码（幂等，忽略已设置错误）
+  shell: |
+    mysqladmin -u root password "{{ mysql_root_password }}"
+  ignore_errors: yes
+
+- name: 创建 root 的 ~/.my.cnf 免密文件
+  copy:
+    content: |
+      [client]
+      user=root
+      password={{ mysql_root_password }}
+    dest: /root/.my.cnf
+    mode: 0600
+
+- name: 部署 my.cnf 配置
+  template:
+    src: my.cnf.j2
+    dest: /etc/my.cnf.d/server.cnf
+  notify: restart mariadb
+
+- name: 强制刷新 handlers 让配置立即生效
+  meta: flush_handlers
+
+- name: 等待数据库完全启动
+  wait_for:
+    port: 3306
+    host: "{{ ansible_host }}"
+    timeout: 30

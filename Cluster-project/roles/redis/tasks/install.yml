@@ -1,0 +1,38 @@
+---
+- name: 安装 Redis 软件包
+  yum:
+    name: redis
+    state: present
+
+- name: 修复 systemd 启动超时（兼容 Redis 6）
+  lineinfile:
+    path: /usr/lib/systemd/system/redis.service
+    regexp: '^#?\s*TimeoutStartSec='
+    line: 'TimeoutStartSec=30'
+    insertafter: '^\[Service\]'
+
+- name: 修复 systemd 停止超时
+  lineinfile:
+    path: /usr/lib/systemd/system/redis.service
+    regexp: '^#?\s*TimeoutStopSec='
+    line: 'TimeoutStopSec=30'
+    insertafter: '^\[Service\]'
+
+- name: 重载 systemd 配置
+  systemd:
+    daemon_reload: yes
+
+- name: 推送 Redis 配置文件（基础配置+持久化）
+  template:
+    src: redis.conf.j2
+    dest: /etc/redis/redis.conf
+    owner: redis
+    group: redis
+    mode: '0640'
+  notify: restart redis
+
+- name: 启动 Redis 并设置开机自启
+  systemd:
+    name: redis
+    state: started
+    enabled: yes

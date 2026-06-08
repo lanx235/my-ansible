@@ -1,0 +1,15 @@
+---
+- name: 所有节点：环境准备
+  import_tasks: prepare.yml
+
+- name: 首节点：初始化集群
+  import_tasks: bootstrap.yml
+  when: inventory_hostname == ceph_nodes[0].name
+
+- name: 首节点：分发公钥到其他节点
+  import_tasks: distribute_keys.yml
+  when: inventory_hostname == ceph_nodes[0].name
+
+- name: 首节点：添加节点与 OSD
+  import_tasks: expand.yml
+  when: inventory_hostname == ceph_nodes[0].name

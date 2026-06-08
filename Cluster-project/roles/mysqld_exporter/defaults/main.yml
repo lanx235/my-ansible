@@ -1,0 +1,26 @@
+---
+# 软件包信息
+exporter_version: "0.19.0"
+archive: "mysqld_exporter-{{ exporter_version }}.linux-amd64.tar.gz"
+binary: "mysqld_exporter"
+
+# 控制节点上的软件包路径
+soft_src: "/var/ftp/soft/{{ archive }}"
+
+# 安装路径
+install_path: "/usr/local/bin/{{ binary }}"
+
+# 服务配置
+service_name: "mysqld_exporter"
+user: "mysql-exporter"
+exporter_port: 9104
+
+# MySQL 连接方式（socket）
+mysql_socket: "/var/lib/mysql/mysql.sock"
+mysql_user: "exporter"
+mysql_password: "exporter123"
+
+# 认证文件路径
+exporter_cnf: "/etc/mysqld_exporter.cnf"
+
+# extra_args 将通过模板自动拼接

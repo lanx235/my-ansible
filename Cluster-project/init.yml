@@ -1,0 +1,146 @@
+---
+# Play 1：控制节点（pubserver）配置 —— NTP 服务端 + 可选 YUM 源（如果需要）
+- name: 初始化控制节点（NTP 服务端）
+  hosts: pubserver
+  gather_facts: yes
+  tasks:
+    - name: 安装 chrony
+      package:
+        name: chrony
+        state: present
+
+    - name: 配置 chrony 为 NTP 服务端（允许所有客户端同步）
+      blockinfile:
+        path: /etc/chrony.conf
+        block: |
+          pool ntp.aliyun.com iburst
+          allow 0.0.0.0/0
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - NTP SERVER"
+      notify: restart chronyd
+
+    - name: 启动并启用 chronyd
+      service:
+        name: chronyd
+        state: started
+        enabled: yes
+    - name: 放行 FTP 服务防火墙
+      firewalld:
+        service: ftp
+        permanent: yes
+        immediate: yes
+        state: enabled
+      ignore_errors: yes
+  handlers:
+    - name: restart chronyd
+      service:
+        name: chronyd
+        state: restarted
+
+# Play 2：所有被管节点（除 pubserver 外）—— 配置 YUM 源 + NTP 客户端 + 基础软件包
+- name: 配置被管节点基础环境（YUM 源、NTP 客户端、基础软件包）
+  hosts: all:!pubserver
+  gather_facts: yes
+  vars:
+    ntp_server: "192.168.1.240"
+    # 安装基础软件包的列表
+    base_packages:
+      - vim
+      - wget
+      - curl
+      - net-tools
+      - telnet
+      - tree
+      - lsof
+      - bash-completion
+      - unzip
+      - zip
+      - yum-utils
+      # 可根据需要增减
+
+  tasks:
+    # ---------- YUM 源 ----------
+    - name: 删除原有所有 YUM 仓库文件
+      shell: rm -f /etc/yum.repos.d/*.repo
+      when: configure_yum_repos | default(true) | bool
+
+    - name: 确保 /etc/yum.repos.d 目录存在
+      file:
+        path: /etc/yum.repos.d
+        state: directory
+        mode: '0755'
+
+    - name: 推送控制节点上的 YUM 源文件到被管节点
+      copy:
+        src: /etc/yum.repos.d/mydvd.repo   
+        dest: /etc/yum.repos.d/mydvd.repo
+        owner: root
+        group: root
+        mode: '0644'
+      when: configure_yum_repos | default(true) | bool
+
+    - name: 刷新 YUM 缓存
+      command: yum makecache
+      changed_when: false
+    - name: 设置主机名为 inventory_hostname（短名称）
+      hostname:
+        name: "{{ inventory_hostname }}"
+
+    - name: 更新 /etc/hosts 确保本机解析正确
+      lineinfile:
+         path: /etc/hosts
+         regexp: '^127\.0\.1\.1\s+'
+         line: "127.0.1.1 {{ inventory_hostname }}"
+         state: present
+      when: ansible_os_family == "RedHat"   # 或直接执行，不影响
+
+    - name: 关闭 SELinux（临时生效）
+      command: setenforce 0
+      ignore_errors: yes
+
+    - name: 永久禁用 SELinux
+      lineinfile:
+        path: /etc/selinux/config
+        regexp: '^SELINUX='
+        line: 'SELINUX=disabled'
+
+    - name: 停止并禁用 firewalld 服务
+      systemd:
+        name: firewalld
+        state: stopped
+        enabled: no
+      ignore_errors: yes
+    # ---------- 基础软件包安装 ----------
+    - name: 安装基础软件包
+      package:
+        name: "{{ base_packages }}"
+        state: present
+      when: install_base_packages | default(true) | bool
+
+    # ---------- NTP 客户端 ----------
+    - name: 安装 chrony
+      package:
+        name: chrony
+        state: present
+      when: configure_ntp_client | default(true) | bool
+
+    - name: 配置 chrony 客户端指向控制节点（pubserver）
+      lineinfile:
+        path: /etc/chrony.conf
+        regexp: '^(pool|server) '
+        line: "server {{ ntp_server }} iburst"
+        state: present
+      when: configure_ntp_client | default(true) | bool
+      notify: restart chronyd
+
+    - name: 启动并启用 chronyd
+      service:
+        name: chronyd
+        state: started
+        enabled: yes
+      when: configure_ntp_client | default(true) | bool
+
+  handlers:
+    - name: restart chronyd
+      service:
+        name: chronyd
+        state: restarted

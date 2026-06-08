@@ -1,0 +1,29 @@
+---
+# ============================================================
+# 剧本：更新 LVS 业务规则（日常运维使用，不重启 Keepalived）
+# 用法：
+#   1. 直接修改下面 vars 块中的 real_servers 列表
+#   2. 使用 -e 参数临时覆盖，例如：
+#      ansible-playbook update_lvs_rules.yml -e '{"real_servers":[{"ip":"192.168.1.24","weight":2}]}'
+# ============================================================
+
+- name: 更新 LVS 业务规则
+  hosts: lvs
+  become: yes
+
+  vars:
+    # 调度算法（与部署时保持一致）
+    lb_algo: "rr"
+    # 转发模式（DR）
+    lb_kind: "DR"
+    # 后端 Web 服务器列表（根据实际修改）
+    real_servers:
+      - ip: 192.168.1.21
+        weight: 1
+      - ip: 192.168.1.22
+        weight: 1
+      - ip: 192.168.1.23
+        weight: 1
+
+  tasks:
+    - import_tasks: roles/lvs/tasks/update_rules.yml

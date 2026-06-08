@@ -1,0 +1,74 @@
+---
+# ProxySQL 版本和安装源
+proxysql_version: "2.6.x"
+proxysql_repo_baseurl: "https://repo.proxysql.com/ProxySQL/proxysql-{{ proxysql_version }}/centos/$releasever"
+
+# 路径配置
+proxysql_datadir: "/var/lib/proxysql"
+proxysql_errorlog: "/var/lib/proxysql/proxysql.log"
+
+# 管理接口
+proxysql_admin_ifaces: "0.0.0.0:6032"
+proxysql_local_admin: "admin:admin"
+proxysql_remote_admin_user: "cluster_user"
+proxysql_remote_admin_pass: "cluster_pass"   # 请使用强密码，建议 vault 加密
+
+# 客户端接口
+proxysql_client_ifaces: "0.0.0.0:6033"
+
+# MySQL 变量（可调参数）
+proxysql_threads: 4
+proxysql_max_connections: 2048
+proxysql_default_query_delay: 0
+proxysql_default_query_timeout: 36000000
+proxysql_have_compress: true
+proxysql_poll_timeout: 2000
+proxysql_default_schema: "information_schema"
+proxysql_stacksize: 1048576
+proxysql_server_version: "5.7.30"
+proxysql_connect_timeout_server: 3000
+proxysql_monitor_user: "monitor"
+proxysql_monitor_pass: "monitor"
+proxysql_monitor_history: 600000
+proxysql_monitor_connect_interval: 60000
+proxysql_monitor_ping_interval: 10000
+proxysql_monitor_read_only_interval: 1500
+proxysql_monitor_read_only_timeout: 500
+proxysql_ping_interval_server_msec: 120000
+proxysql_ping_timeout_server: 500
+proxysql_commands_stats: true
+proxysql_sessions_sort: true
+proxysql_connect_retries_on_failure: 10
+
+# 后端服务器列表
+proxysql_backend_servers: []
+# 示例：
+#   - { hostname: "192.168.1.31", port: 3306, hostgroup: 0, max_connections: 100, comment: "master" }
+#   - { hostname: "192.168.1.32", port: 3306, hostgroup: 1, max_connections: 100, comment: "slave1" }
+
+# MySQL 用户列表（业务及监控用户）
+proxysql_mysql_users: []
+# 示例：
+#   - { username: "app_user", password: "app_pass", default_hostgroup: 0, transaction_persistent: 1 }
+#   - { username: "monitor", password: "monitor", default_hostgroup: 0, transaction_persistent: 1 }
+
+proxysql_restapi_enabled: true
+proxysql_restapi_port: 6070
+
+# 查询路由规则
+proxysql_query_rules: []
+# 示例：
+#   - { rule_id: 1, match_digest: '^SELECT.*FOR UPDATE$', destination_hostgroup: 0, apply: 1, comment: "加锁读 -> 主库" }
+#   - { rule_id: 2, match_digest: '^SELECT', destination_hostgroup: 1, apply: 1, comment: "普通查询 -> 从库" }
+
+# 复制主机组（可选，用于自动主从检测）
+proxysql_replication_hostgroups: []
+# 示例：
+#   - { writer: 0, reader: 1, comment: "读写分离组" }
+
+# 集群配置
+proxysql_cluster_enabled: false
+proxysql_cluster_nodes: []
+# 示例：
+#   - { hostname: "192.168.1.10", port: 6032, weight: 1, comment: "lvs1" }
+#   - { hostname: "192.168.1.11", port: 6032, weight: 1, comment: "lvs2" }

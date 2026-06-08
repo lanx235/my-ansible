@@ -1,0 +1,10 @@
+---
+alloy_local_bin: /tmp/alloy
+alloy_install_path: /usr/local/bin/alloy
+alloy_config_dir: /etc/alloy
+alloy_config_file: /etc/alloy/config.alloy
+loki_endpoint: "http://192.168.1.240:3100/loki/api/v1/push"
+
+log_targets:
+- path: /var/log/messages
+  job: syslog

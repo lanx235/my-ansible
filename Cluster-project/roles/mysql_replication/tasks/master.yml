@@ -1,0 +1,20 @@
+---
+- name: 创建复制用户（强制更新密码）
+  ansible.mysql.mysql_user:
+    name: "{{ mysql_repl_user }}"
+    host: "%"
+    password: "{{ mysql_repl_password }}"
+    priv: "*.*:REPLICATION SLAVE"
+    state: present
+    update_password: always
+    login_unix_socket: /var/lib/mysql/mysql.sock
+
+- name: 获取主库 binlog 坐标
+  ansible.mysql.mysql_replication:
+    mode: getprimary
+    login_unix_socket: /var/lib/mysql/mysql.sock
+  register: master_status
+
+- name: 显示主库坐标（调试）
+  debug:
+    msg: "File: {{ master_status.File }}, Position: {{ master_status.Position }}"

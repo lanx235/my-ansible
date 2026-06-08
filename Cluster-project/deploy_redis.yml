@@ -1,0 +1,29 @@
+---
+- name: Deploy Redis cluster with sentinel
+  hosts: redis
+  become: yes
+  vars:
+    # 角色判定
+    master_hostname: "redis1"
+    redis_role: "{{ 'master' if inventory_hostname == master_hostname else 'slave' }}"
+    
+    # 可覆盖的变量（覆盖 defaults/main.yml）
+    redis_port: 6379
+    redis_bind: "0.0.0.0"
+    redis_requirepass: "123456"
+    redis_masterauth: "123456"
+    redis_master_ip: "192.168.1.51"
+    redis_master_port: 6379
+    sentinel_port: 26379
+    sentinel_quorum: 2
+    sentinel_down_after_milliseconds: 3000
+    sentinel_failover_timeout: 10000
+    sentinel_parallel_syncs: 1
+    redis_save:
+      - "900 1"
+      - "300 10"
+      - "60 10000"
+    redis_appendonly: "yes"
+    redis_appendfsync: "everysec"
+  roles:
+    - redis

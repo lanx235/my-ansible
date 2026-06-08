@@ -1,0 +1,17 @@
+---
+# 软件包信息
+archive: "nginx-prometheus-exporter_1.5.1_linux_amd64.tar.gz"
+binary: "nginx-prometheus-exporter"
+
+# 服务配置
+exporter_port: 9113
+user: "nginx-exporter"
+service_name: "nginx_exporter"
+extra_args: "-nginx.scrape-uri=http://127.0.0.1:8080/nginx_status"
+
+# 路径（由控制节点 soft 目录拼接）
+soft_src: "/var/ftp/soft/{{ archive }}"
+install_path: "/usr/local/bin/{{ binary }}"
+
+# 前置检查地址（用于验证 Nginx stub_status 是否可达）
+stub_status_url: "http://127.0.0.1:8080/nginx_status"

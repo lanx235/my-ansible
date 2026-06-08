@@ -1,0 +1,6 @@
+---
+- name: 启动服务
+  systemd:
+    name: "{{ service_name }}"
+    state: restarted
+    daemon_reload: yes

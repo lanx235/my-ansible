@@ -1,0 +1,26 @@
+---
+# ==================== Redis 基础 ====================
+redis_port: 6379                          # Redis 监听端口
+redis_bind: "0.0.0.0"                    # 绑定地址，0.0.0.0 监听所有接口
+redis_requirepass: "123456"         # 客户端访问密码
+redis_masterauth: "123456"          # 从库和哨兵连接主库所需的密码
+
+# ==================== 主节点信息（从库与哨兵使用）====================
+redis_master_ip: "50.0.0.50"             # 主库 IP
+redis_master_port: 6379                  # 主库端口
+
+# ==================== Sentinel 配置 ====================
+sentinel_port: 26379                     # Sentinel 监听端口
+sentinel_quorum: 2                       # 法定票数（最少同意故障切换的哨兵数）
+sentinel_down_after_milliseconds: 3000   # 主节点失联判定超时（毫秒）
+sentinel_failover_timeout: 10000         # 故障转移超时（毫秒）
+sentinel_parallel_syncs: 1               # 切换时最多允许多少从库同时同步新主库
+
+# ==================== 持久化 ====================
+# RDB 保存策略（格式：秒 键变化次数）
+redis_save:
+  - "900 1"
+  - "300 10"
+  - "60 10000"
+redis_appendonly: "yes"                  # 开启 AOF
+redis_appendfsync: "everysec"            # AOF fsync 策略：每秒同步

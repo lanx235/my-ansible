@@ -1,0 +1,35 @@
+- hosts: db
+  become: yes
+  tasks:
+    - name: 停止 mysqld_exporter 服务（忽略错误）
+      systemd:
+        name: mysqld_exporter
+        state: stopped
+        enabled: no
+      ignore_errors: yes
+
+    - name: 删除 systemd 服务文件
+      file:
+        path: /etc/systemd/system/mysqld_exporter.service
+        state: absent
+
+    - name: 重新加载 systemd
+      systemd:
+        daemon_reload: yes
+
+    - name: 删除二进制文件
+      file:
+        path: /usr/local/bin/mysqld_exporter
+        state: absent
+
+    - name: 删除临时解压目录
+      file:
+        path: /tmp/mysqld_exporter_install
+        state: absent
+
+    - name: 删除 exporter 系统用户（可选，注释掉若不想删）
+      user:
+        name: mysqld_exporter
+        state: absent
+        remove: yes
+      ignore_errors: yes

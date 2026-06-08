@@ -1,0 +1,21 @@
+---
+# 主库主机名（必须与 inventory 中的名称一致）
+mysql_master_host: "master"
+
+# 复制用户凭证
+mysql_repl_user: "repl"
+mysql_repl_password: "repl123456"
+
+# MariaDB 版本相关
+mysql_packages:
+  - mariadb-server
+  - python3-PyMySQL   # 供 ansible 模块连接数据库
+
+# 数据目录（可改为 Ceph RBD 挂载点）
+mysql_datadir: "/var/lib/mysql"
+
+# 是否启用二进制日志（主库必须）
+mysql_enable_binlog: true
+
+# 从库只读设置
+mysql_slave_read_only: true

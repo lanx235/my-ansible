@@ -1,0 +1,29 @@
+# deploy_alloy_mysql.yml
+- hosts: db
+  become: yes
+  vars:
+    # 定义数据库的数据目录，根据你的系统选择其一
+    mysql_datadir: "/var/lib/mysql"       # CentOS / RHEL / 部分Debian系
+    # a mysql_datadir: "/var/lib/mariadb"      # 部分Debian/Ubuntu系统默认路径
+    
+    # 动态构建默认日志文件的完整路径
+    log_targets:
+      # 1. 系统日志（通用）
+      - path: /var/log/messages
+        job: syslog
+      
+      # 2. 错误日志（默认路径：数据目录下的 "hostname.err"）
+      #    使用 {{ inventory_hostname }} 动态获取主机名
+      - path: "{{ mysql_datadir }}/{{ inventory_hostname }}.err"
+        job: mysql_error
+      
+      # 3. 慢查询日志（默认路径：数据目录下的 "hostname-slow.log"）
+      - path: "{{ mysql_datadir }}/{{ inventory_hostname }}-slow.log"
+        job: mysql_slow
+      
+      # 注意：通用查询日志（general log）默认是关闭的，如你已开启，可取消下面一行的注释
+      # - path: "{{ mysql_datadir }}/{{ inventory_hostname }}.log"
+      #   job: mysql_general
+
+  roles:
+    - alloy

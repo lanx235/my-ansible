@@ -1,0 +1,8 @@
+- hosts: db
+  become: yes
+  vars:
+    mysql_socket: "/var/lib/mysql/mysql.sock"
+    mysql_user: "exporter"
+    mysql_password: "123456"
+  roles:
+    - mysqld_exporter

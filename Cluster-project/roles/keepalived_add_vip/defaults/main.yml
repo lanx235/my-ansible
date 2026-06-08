@@ -1,0 +1,12 @@
+---
+# 新 VIP 的配置变量（必须在调用时覆盖）
+vip: "192.168.1.100"             # 内网 VIP 地址（不能与现有 VIP 重复）
+interface: "ens160"               # 内网网卡名
+virtual_router_id: 52             # 必须与现有实例不同（现有为 51）
+master_hostname: "lvs1"           # 主节点的主机名（用于自动设置 MASTER/BACKUP）
+vip_name: "proxysql_vip"          # 配置文件名（不含 .conf），建议按服务命名
+
+# 可选变量
+auth_pass: "1111"                 # VRRP 认证密码
+priority_master: 100
+priority_backup: 90

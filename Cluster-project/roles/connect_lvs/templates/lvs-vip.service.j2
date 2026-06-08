@@ -1,0 +1,12 @@
+[Unit]
+Description=Bind LVS VIP {{ vip }} to loopback
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c '/sbin/ip addr show dev lo | grep -q {{ vip }} || /sbin/ip addr add {{ vip }}/32 dev lo'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

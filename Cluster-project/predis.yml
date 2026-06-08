@@ -1,0 +1,34 @@
+---
+- name: 推送 Predis 库到 Web 节点
+  hosts: webs
+  become: yes
+  vars:
+    web_root: /usr/share/nginx/html          # 你的 Web 根目录
+    predis_src: /root/predis-2.0.3           # 控制节点上解压后的 Predis 目录
+  tasks:
+    - name: 确保目标目录存在
+      file:
+        path: "{{ web_root }}/vendor"
+        state: directory
+        owner: nginx
+        group: nginx
+        mode: '0755'
+
+    - name: 拷贝 Predis 源码到 Web 节点（使用 shell 绕过 copy 模块卡顿）
+      shell: "cp -r {{ predis_src }}/* {{ web_root }}/vendor/"
+      args:
+        creates: "{{ web_root }}/vendor/autoload.php"
+
+    - name: 修正 vendor 目录权限
+      file:
+        path: "{{ web_root }}/vendor"
+        owner: nginx
+        group: nginx
+        mode: '0755'
+        recurse: yes
+
+    - name: 重载 PHP-FPM
+      systemd:
+        name: php-fpm
+        state: reloaded
+      changed_when: false

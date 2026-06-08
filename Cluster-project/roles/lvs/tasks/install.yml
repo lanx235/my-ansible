@@ -1,0 +1,7 @@
+---
+- name: 安装 ipvsadm 和 keepalived
+  yum:
+    name:
+      - ipvsadm
+      - keepalived
+    state: present

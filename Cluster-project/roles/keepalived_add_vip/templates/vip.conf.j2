@@ -1,0 +1,16 @@
+# {{ vip_name }} VIP configuration
+# Managed by Ansible
+vrrp_instance {{ vip_name }} {
+    state {{ 'MASTER' if master_hostname in ansible_hostname else 'BACKUP' }}
+    interface {{ interface }}
+    virtual_router_id {{ virtual_router_id }}
+    priority {{ priority_master if master_hostname in ansible_hostname else priority_backup }}
+    advert_int 1
+    authentication {
+        auth_type PASS
+        auth_pass {{ auth_pass }}
+    }
+    virtual_ipaddress {
+        {{ vip }}/24 dev {{ interface }}
+    }
+}

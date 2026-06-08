@@ -1,0 +1,9 @@
+---
+- name: 配置 Web 节点以对接 LVS-DR 模式
+  hosts: webs
+  become: yes
+  vars:
+    # vip 已在角色 defaults 中定义，如需覆盖在此修改
+    # vip: "200.0.0.50"
+  roles:
+    - connect_lvs

@@ -1,0 +1,15 @@
+---
+- name: 公共配置（所有节点）
+  include_tasks: common.yml
+
+- name: 主库特定配置
+  include_tasks: master.yml
+  when: inventory_hostname == mysql_master_host
+
+- name: 从库特定配置
+  include_tasks: slave.yml
+  when: inventory_hostname != mysql_master_host
+
+- name: 配置从库复制
+  include_tasks: replication.yml
+  when: inventory_hostname != mysql_master_host

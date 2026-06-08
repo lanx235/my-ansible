@@ -1,0 +1,26 @@
+---
+- hosts: db
+  become: true
+  vars:
+    mysql_root_password: "你的root密码"  # 请替换为你的实际密码
+  tasks:
+    # 1. 清理 MySQL 相关的包（针对 RedHat 系）
+    - name: 移除 MySQL 或 MariaDB 相关包
+      package:
+        name:
+          - mariadb*
+          - mysql*
+        state: absent
+      ignore_errors: true
+
+    # 2. 删除遗留的数据目录和配置
+    - name: 删除 MySQL 数据及日志目录
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /var/lib/mysql
+        - /var/log/mysql
+        - /etc/my.cnf
+        - /etc/my.cnf.d
+      ignore_errors: true

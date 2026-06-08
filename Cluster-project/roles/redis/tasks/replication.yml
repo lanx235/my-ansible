@@ -1,0 +1,8 @@
+---
+- name: 将从库挂载到主库（追加 replicaof 配置到文件末尾）
+  lineinfile:
+    path: /etc/redis/redis.conf
+    line: "replicaof {{ redis_master_ip }} {{ redis_master_port }}"
+    insertafter: EOF
+  when: redis_role == 'slave'             # 仅从库执行，主库跳过
+  notify: restart redis                   # 配置变更后重启生效

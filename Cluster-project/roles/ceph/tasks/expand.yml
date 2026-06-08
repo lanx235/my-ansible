@@ -1,0 +1,30 @@
+---
+- name: 将所有节点添加进集群
+  command: "ceph orch host add {{ item.name }} {{ item.ip }}"
+  loop: "{{ ceph_nodes }}"
+  register: add_result
+  failed_when:
+    - add_result.rc != 0
+    - "'already exists' not in add_result.stderr"
+
+- name: 设置 MON 数量（等于节点数）
+  command: "ceph orch apply mon --placement='{{ ceph_nodes | map(attribute='name') | join(',') }}'"
+
+- name: 设置 MGR 数量（等于节点数）
+  command: "ceph orch apply mgr --placement='{{ ceph_nodes | map(attribute='name') | join(',') }}'"
+
+- name: 添加所有可用磁盘为 OSD
+  command: ceph orch apply osd --all-available-devices
+
+- name: 等待 OSD 初始化（30 秒）
+  pause:
+    seconds: 30
+
+- name: 获取集群状态
+  command: ceph -s
+  register: ceph_status
+  changed_when: false
+
+- name: 显示集群状态
+  debug:
+    var: ceph_status.stdout_lines

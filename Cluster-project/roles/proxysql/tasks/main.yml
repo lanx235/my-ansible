@@ -1,0 +1,169 @@
+---
+- name: 安装 MySQL 客户端（用于执行 SQL）
+  package:
+    name: mariadb
+    state: present
+
+- name: 安装 ProxySQL 软件包
+  package:
+    name: proxysql
+    state: present
+
+- name: 创建数据目录
+  file:
+    path: "{{ proxysql_datadir }}"
+    state: directory
+    owner: proxysql
+    group: proxysql
+    mode: '0750'
+
+- name: 部署 proxysql.cnf 配置文件（用于首次初始化）
+  template:
+    src: proxysql.cnf.j2
+    dest: /etc/proxysql.cnf
+  register: proxysql_cfg
+
+- name: 检查数据库文件是否已存在
+  stat:
+    path: "{{ proxysql_datadir }}/proxysql.db"
+  register: proxysql_db
+
+- name: 强制重新初始化（配置变更或数据库缺失）
+  block:
+    - name: 停止 ProxySQL 服务
+      systemd:
+        name: proxysql
+        state: stopped
+      ignore_errors: yes
+
+    - name: 删除旧数据库文件
+      file:
+        path: "{{ proxysql_datadir }}/proxysql.db"
+        state: absent
+
+    - name: 启动 ProxySQL 服务（从配置文件初始化）
+      systemd:
+        name: proxysql
+        state: started
+        enabled: yes
+  when: proxysql_cfg.changed or not proxysql_db.stat.exists
+
+- name: 确保服务已启动（无变更时）
+  systemd:
+    name: proxysql
+    state: started
+    enabled: yes
+  when: not (proxysql_cfg.changed or not proxysql_db.stat.exists)
+
+- name: 等待管理端口就绪
+  wait_for:
+    port: "{{ proxysql_admin_ifaces.split(':')[1] }}"
+    host: "{{ proxysql_admin_ifaces.split(':')[0] }}"
+    timeout: 30
+
+# ==================== 远程管理员配置（幂等覆盖） ====================
+- name: 设置远程管理员凭据（强制覆盖）
+  shell: |
+    mysql -u admin -padmin -h 127.0.0.1 -P {{ proxysql_admin_ifaces.split(':')[1] }} -e "
+    UPDATE global_variables SET variable_value = 'admin:admin;{{ proxysql_remote_admin_user }}:{{ proxysql_remote_admin_pass }}' WHERE variable_name = 'admin-admin_credentials';
+    LOAD ADMIN VARIABLES TO RUNTIME;
+    SAVE ADMIN VARIABLES TO DISK;
+    "
+  no_log: true
+  changed_when: false
+
+# ==================== 集群节点注册（可选） ====================
+- name: 注册集群节点（如果启用且节点数>1）
+  block:
+    - name: 清空现有集群节点记录
+      shell: |
+        mysql -u {{ proxysql_remote_admin_user }} -p'{{ proxysql_remote_admin_pass }}' -h 127.0.0.1 -P {{ proxysql_admin_ifaces.split(':')[1] }} -e "DELETE FROM proxysql_servers;"
+      changed_when: false
+
+    - name: 插入集群节点
+      shell: |
+        mysql -u {{ proxysql_remote_admin_user }} -p'{{ proxysql_remote_admin_pass }}' -h 127.0.0.1 -P {{ proxysql_admin_ifaces.split(':')[1] }} -e "
+        INSERT INTO proxysql_servers (hostname, port, weight, comment) VALUES
+        {% for node in proxysql_cluster_nodes %}
+        ('{{ node.hostname }}', {{ node.port }}, {{ node.weight }}, '{{ node.comment }}'){% if not loop.last %},{% endif %}
+        {% endfor %};
+        "
+      changed_when: false
+
+    - name: 加载并持久化集群节点
+      shell: |
+        mysql -u {{ proxysql_remote_admin_user }} -p'{{ proxysql_remote_admin_pass }}' -h 127.0.0.1 -P {{ proxysql_admin_ifaces.split(':')[1] }} -e "
+        LOAD PROXYSQL SERVERS TO RUNTIME;
+        SAVE PROXYSQL SERVERS TO DISK;
+        "
+      changed_when: false
+
+    - name: 等待集群协商
+      pause:
+        seconds: 5
+  when: proxysql_cluster_enabled and (proxysql_cluster_nodes | length > 1)
+
+# ==================== 后端服务器配置 ====================
+- name: 配置后端 MySQL 服务器
+  shell: |
+    mysql -u {{ proxysql_remote_admin_user }} -p'{{ proxysql_remote_admin_pass }}' -h 127.0.0.1 -P {{ proxysql_admin_ifaces.split(':')[1] }} -e "
+    DELETE FROM mysql_servers;
+    {% for server in proxysql_backend_servers %}
+    INSERT INTO mysql_servers(hostgroup_id, hostname, port, max_connections, comment) VALUES
+    ({{ server.hostgroup }}, '{{ server.hostname }}', {{ server.port }}, {{ server.max_connections | default(100) }}, '{{ server.comment }}');
+    {% endfor %}
+    LOAD MYSQL SERVERS TO RUNTIME;
+    SAVE MYSQL SERVERS TO DISK;
+    "
+  changed_when: false
+
+# ==================== 监控用户凭据配置 ====================
+- name: 设置监控用户凭据
+  shell: |
+    mysql -u {{ proxysql_remote_admin_user }} -p'{{ proxysql_remote_admin_pass }}' -h 127.0.0.1 -P {{ proxysql_admin_ifaces.split(':')[1] }} -e "
+    UPDATE global_variables SET variable_value='{{ proxysql_monitor_user }}' WHERE variable_name='mysql-monitor_username';
+    UPDATE global_variables SET variable_value='{{ proxysql_monitor_pass }}' WHERE variable_name='mysql-monitor_password';
+    LOAD MYSQL VARIABLES TO RUNTIME;
+    SAVE MYSQL VARIABLES TO DISK;
+    "
+  changed_when: false
+
+# ==================== 业务用户配置 ====================
+- name: 配置业务用户
+  shell: |
+    mysql -u {{ proxysql_remote_admin_user }} -p'{{ proxysql_remote_admin_pass }}' -h 127.0.0.1 -P {{ proxysql_admin_ifaces.split(':')[1] }} -e "
+    DELETE FROM mysql_users;
+    {% for user in proxysql_mysql_users %}
+    INSERT INTO mysql_users(username, password, default_hostgroup, transaction_persistent) VALUES
+    ('{{ user.username }}', '{{ user.password }}', {{ user.default_hostgroup }}, {{ user.transaction_persistent | default(1) }});
+    {% endfor %}
+    LOAD MYSQL USERS TO RUNTIME;
+    SAVE MYSQL USERS TO DISK;
+    "
+  changed_when: false
+
+# ==================== 路由规则配置 ====================
+- name: 配置路由规则
+  shell: |
+    mysql -u {{ proxysql_remote_admin_user }} -p'{{ proxysql_remote_admin_pass }}' -h 127.0.0.1 -P {{ proxysql_admin_ifaces.split(':')[1] }} -e "
+    DELETE FROM mysql_query_rules;
+    {% for rule in proxysql_query_rules %}
+    INSERT INTO mysql_query_rules (rule_id, active, match_digest, destination_hostgroup, apply, comment) VALUES
+    ({{ rule.rule_id }}, 1, '{{ rule.match_digest }}', {{ rule.destination_hostgroup }}, {{ rule.apply }}, '{{ rule.comment }}');
+    {% endfor %}
+    LOAD MYSQL QUERY RULES TO RUNTIME;
+    SAVE MYSQL QUERY RULES TO DISK;
+    "
+  changed_when: false
+
+# ==================== 防火墙放行（可选） ====================
+- name: 放行防火墙端口
+  firewalld:
+    port: "{{ item }}/tcp"
+    permanent: yes
+    immediate: yes
+    state: enabled
+  loop:
+    - "{{ proxysql_admin_ifaces.split(':')[1] }}"
+    - "{{ proxysql_client_ifaces.split(':')[1] }}"
+  ignore_errors: yes

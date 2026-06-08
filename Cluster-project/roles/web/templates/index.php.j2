@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Web Cluster Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        h1 { color: #333; }
+        .info { background: #f0f0f0; padding: 15px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Welcome to {{ ansible_hostname }}</h1>
+    <div class="info">
+        <p><strong>Server IP:</strong> {{ ansible_all_ipv4_addresses[0] }}</p>
+        <p><strong>Server Hostname:</strong> {{ ansible_hostname }}</p>
+        <p class="static">静态文件由 Nginx 直接返回，PHP 请求转发至 PHP-FPM</p>
+    </div>
+
+    <h2>PHP 信息</h2>
+    <div class="info">
+        <?php
+        echo "<p>PHP Version: " . phpversion() . "</p>";
+        echo "<p>Server Software: " . $_SERVER['SERVER_SOFTWARE'] . "</p>";
+        ?>
+    </div>
+</body>
+</html>

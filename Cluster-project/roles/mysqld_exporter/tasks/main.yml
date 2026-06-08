@@ -1,0 +1,71 @@
+---
+- name: 创建系统用户
+  user:
+    name: "{{ user }}"
+    system: yes
+    shell: /bin/false
+    create_home: no
+
+- name: 解压安装包
+  unarchive:
+    src: "{{ soft_src }}"
+    dest: /tmp
+    remote_src: no
+
+- name: 查找并复制二进制文件
+  shell: |
+    find /tmp -type f -name "{{ binary }}" | head -1 | xargs -I {} cp {} {{ install_path }}
+  args:
+    creates: "{{ install_path }}"
+
+- name: 设置二进制权限
+  file:
+    path: "{{ install_path }}"
+    owner: root
+    group: root
+    mode: 0755
+
+- name: 创建认证配置文件
+  template:
+    src: mysqld_exporter.cnf.j2
+    dest: "{{ exporter_cnf }}"
+    owner: "{{ user }}"
+    group: "{{ user }}"
+    mode: 0600
+
+- name: 部署 systemd 服务
+  template:
+    src: mysqld_exporter.service.j2
+    dest: "/etc/systemd/system/{{ service_name }}.service"
+    owner: root
+    group: root
+    mode: 0644
+  notify: 启动服务
+
+- name: 立即启动服务（确保幂等）
+  systemd:
+    name: "{{ service_name }}"
+    state: started
+    enabled: yes
+    daemon_reload: yes
+
+- name: 清理临时文件
+  shell: rm -rf /tmp/{{ archive | replace('.tar.gz','') }}*
+  ignore_errors: yes
+
+- name: 等待服务就绪
+  wait_for:
+    port: "{{ exporter_port }}"
+    timeout: 10
+
+- name: 检查指标是否可获取
+  uri:
+    url: "http://localhost:{{ exporter_port }}/metrics"
+    return_content: yes
+  register: metrics_output
+
+- name: 验证 mysql_up 指标为 1
+  assert:
+    that:
+      - "'mysql_up 1' in metrics_output.content"
+    msg: "mysqld_exporter 未能成功连接 MySQL，请检查 socket 和用户权限"

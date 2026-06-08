@@ -1,0 +1,17 @@
+---
+# Nginx 状态页监听地址和端口
+status_listen: "127.0.0.1:8080"
+# Nginx 配置文件路径
+nginx_status_conf: /etc/nginx/conf.d/status.conf
+
+# PHP-FPM 配置
+php_fpm_pool_conf: /etc/php-fpm.d/www.conf
+php_fpm_status_path: /fpm-status
+# PHP-FPM 监听方式（unix socket 或 tcp，如 127.0.0.1:9000）
+# 例如 unix:/run/php-fpm/www.sock 或 127.0.0.1:9000
+# 注意：与 php_fpm_exporter 角色中的 php_fpm_listen 变量含义不同（那里需要 unix:// 前缀）
+php_fpm_listen: "unix:/run/php-fpm/www.sock"
+
+# 功能开关（可按需关闭）
+configure_nginx: true
+configure_php_fpm: true

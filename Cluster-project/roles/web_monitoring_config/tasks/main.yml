@@ -1,0 +1,43 @@
+---
+# ========== Nginx 配置 ==========
+- name: 推送 Nginx 状态页配置文件
+  template:
+    src: status.conf.j2
+    dest: "{{ nginx_status_conf }}"
+    owner: root
+    group: root
+    mode: 0644
+  notify: reload nginx
+  when: configure_nginx | bool
+
+- name: 检查 Nginx 配置语法
+  command: nginx -t
+  changed_when: false
+  when: configure_nginx | bool
+
+# ========== PHP-FPM 配置 ==========
+- name: 检查 php-fpm 是否已安装
+  stat:
+    path: "{{ php_fpm_pool_conf }}"
+  register: php_fpm_conf_stat
+  when: configure_php_fpm | bool
+
+- name: 终止部署（PHP-FPM 未安装）
+  fail:
+    msg: "未找到 {{ php_fpm_pool_conf }}，请先安装 PHP-FPM"
+  when:
+    - configure_php_fpm | bool
+    - not php_fpm_conf_stat.stat.exists
+
+- name: 开启 PHP-FPM status 页面
+  lineinfile:
+    path: "{{ php_fpm_pool_conf }}"
+    regexp: '^;?\s*pm\.status_path\s*='
+    line: 'pm.status_path = {{ php_fpm_status_path }}'
+    state: present
+  notify: restart php-fpm
+  when: configure_php_fpm | bool
+
+# ========== 立即生效 ==========
+- name: 强制刷新 handlers
+  meta: flush_handlers

@@ -1,0 +1,39 @@
+---
+- name: 确保 conf.d 目录存在
+  file:
+    path: /etc/keepalived/conf.d
+    state: directory
+    mode: '0755'
+
+- name: 部署新 VIP 配置文件
+  template:
+    src: vip.conf.j2
+    dest: "/etc/keepalived/conf.d/{{ vip_name }}.conf"
+    mode: '0644'
+  register: vip_config
+
+- name: 检查配置文件语法
+  command: keepalived -t -f /etc/keepalived/conf.d/{{ vip_name }}.conf
+  register: syntax_check
+  changed_when: false
+  failed_when: syntax_check.rc != 0
+
+- name: 重启 keepalived 服务
+  systemd:
+    name: keepalived
+    state: restarted
+  when: vip_config.changed
+  notify: wait_vip
+
+# 注意：由于 handlers 在 play 结束时才执行，这里直接重启后等待 VIP 生效
+- name: 等待 VIP 出现在网卡上
+  shell: |
+    for i in $(seq 1 10); do
+      ip addr show {{ interface }} | grep -q "{{ vip }}" && exit 0
+      sleep 1
+    done
+    exit 1
+  register: vip_check
+  changed_when: false
+  failed_when: vip_check.rc != 0
+  when: vip_config.changed

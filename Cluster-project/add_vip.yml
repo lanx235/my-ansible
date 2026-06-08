@@ -1,0 +1,14 @@
+---
+- name: 在现有 Keepalived 基础上添加内网 VIP（ProxySQL 用）
+  hosts: lvs                # 你的 LVS 节点组
+  become: yes
+  vars:
+    # 请根据实际环境修改变量
+    vip: "192.168.1.100"        # 内网 VIP
+    interface: "ens160"          # 内网网卡名
+    virtual_router_id: 52        # 未使用的 ID
+    master_hostname: "lvs1"      # 主节点主机名
+    vip_name: "proxysql_vip"     # 文件名标识
+    auth_pass: "1111"            # 认证密码（与现有密码一致或自定义）
+  roles:
+    - keepalived_add_vip

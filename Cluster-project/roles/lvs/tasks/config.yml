@@ -1,0 +1,23 @@
+---
+- name: 确保业务配置目录存在
+  file:
+    path: /etc/keepalived/conf.d
+    state: directory
+
+- name: 推送 Keepalived 核心配置
+  template:
+    src: keepalived.conf.j2
+    dest: /etc/keepalived/keepalived.conf
+  notify: reload keepalived
+
+- name: 推送初始业务规则
+  template:
+    src: lvs_rules.conf.j2
+    dest: /etc/keepalived/conf.d/lvs.conf
+  notify: reload keepalived
+
+- name: 启动并启用 Keepalived
+  systemd:
+    name: keepalived
+    state: started
+    enabled: yes

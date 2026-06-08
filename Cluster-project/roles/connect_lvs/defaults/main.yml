@@ -1,0 +1,5 @@
+---
+vip: "200.0.0.100"
+lo_alias: "lo:0"
+vip_netmask: "255.255.255.255"
+onboot: "yes"

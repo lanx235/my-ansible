@@ -1,0 +1,34 @@
+---
+# ------------------------------
+# 基础配置
+# ------------------------------
+ceph_mon_ip: "192.168.1.41"                # 首节点的 IP（用于 bootstrap）
+ceph_dashboard_password: "123456"     # Ceph Dashboard 初始密码
+
+# ------------------------------
+# 镜像源选择
+# ------------------------------
+use_private_registry: true              # true=使用私有仓库，false=使用公网 quay.io
+
+# 以下两项仅在 use_private_registry: true 时生效
+private_registry_host: "192.168.1.240"  # 私有仓库 IP/域名
+private_registry_port: 5000             # 私有仓库端口
+
+# 公网镜像地址（当 use_private_registry: false 时使用）
+ceph_public_image: "quay.io/ceph/ceph:v17"
+
+# ------------------------------
+# 节点列表（必须与 inventory 主机名一致）
+# ------------------------------
+ceph_nodes:
+  - name: ceph1
+    ip: 192.168.1.41
+  - name: ceph2
+    ip: 192.168.1.42
+  - name: ceph3
+    ip: 192.168.1.43
+
+# ------------------------------
+# 内部变量（一般无需修改）
+# ------------------------------
+cephadm_path: "/root/cephadm"

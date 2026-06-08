@@ -1,0 +1,11 @@
+---
+- name: 部署 MariaDB 主从复制
+  hosts: db
+  become: yes
+  vars:
+    # 可根据需要覆盖默认变量
+    mysql_root_password: "123456"
+    mysql_repl_password: "123456"
+    mysql_master_host: "sql1"
+  roles:
+    - mysql_replication

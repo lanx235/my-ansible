@@ -1,0 +1,6 @@
+---
+- name: 部署 Ceph 集群
+  hosts: ceph
+  become: yes
+  roles:
+    - ceph

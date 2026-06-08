@@ -1,0 +1,28 @@
+---
+# 软件包信息（压缩包名，不带 .tar.gz 后缀，方便拼接）
+archive_name: "php-fpm_exporter_2.2.0_linux_amd64"
+binary_name: "php-fpm_exporter"
+package_suffix: ".tar.gz"
+
+# 控制节点软件包完整路径（压缩包）
+soft_src: "/var/ftp/soft/{{ archive_name }}{{ package_suffix }}"
+
+# 安装路径
+install_path: "/usr/local/bin/{{ binary_name }}"
+
+# 服务配置
+exporter_port: 9253
+user: "php-fpm-exporter"
+service_name: "php_fpm_exporter"
+
+# PHP-FPM 状态路径
+php_fpm_status_path: "/fpm-status"
+
+# PHP-FPM 监听方式（Unix Socket 或 TCP）
+php_fpm_listen: "unix:///run/php-fpm/www.sock"
+
+# 拼接完整的 scrape-uri（v1.2.1 语法：用分号分隔）
+scrape_uri: "{{ php_fpm_listen }};{{ php_fpm_status_path }}"
+
+# 子命令（v1.2.1+ 需要 server）
+exec_prefix: "server"

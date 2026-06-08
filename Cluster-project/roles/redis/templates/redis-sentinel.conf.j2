@@ -1,0 +1,12 @@
+# {{ ansible_managed }}
+port {{ sentinel_port }}
+daemonize no
+pidfile /var/run/redis/sentinel.pid
+logfile /var/log/redis/sentinel.log
+dir /var/lib/redis
+
+sentinel monitor mymaster {{ redis_master_ip }} {{ redis_master_port }} {{ sentinel_quorum }}
+sentinel auth-pass mymaster {{ redis_masterauth }}
+sentinel down-after-milliseconds mymaster {{ sentinel_down_after_milliseconds }}
+sentinel failover-timeout mymaster {{ sentinel_failover_timeout }}
+sentinel parallel-syncs mymaster {{ sentinel_parallel_syncs }}

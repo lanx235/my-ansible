@@ -1,0 +1,4 @@
+- hosts: redis
+  become: yes
+  roles:
+    - redis_exporter

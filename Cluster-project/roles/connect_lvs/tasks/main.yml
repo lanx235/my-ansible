@@ -1,0 +1,51 @@
+---
+# ========== 临时生效（立即激活） ==========
+- name: 立即绑定 VIP 到 lo 接口
+  command: ip addr add {{ vip }}/32 dev lo
+  changed_when: false
+  ignore_errors: yes
+
+- name: 立即设置 ARP 抑制参数
+  sysctl:
+    name: "{{ item }}"
+    value: "{{ '1' if 'ignore' in item else '2' }}"
+    state: present
+    sysctl_set: yes
+  loop:
+    - net.ipv4.conf.all.arp_ignore
+    - net.ipv4.conf.all.arp_announce
+    - net.ipv4.conf.lo.arp_ignore
+    - net.ipv4.conf.lo.arp_announce
+
+# ========== 持久化（重启后自动生效） ==========
+- name: 部署 LVS VIP systemd 服务
+  template:
+    src: lvs-vip.service.j2
+    dest: /etc/systemd/system/lvs-vip.service
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: 启用并立即启动 VIP 服务
+  systemd:
+    name: lvs-vip
+    state: started
+    enabled: yes
+    daemon_reload: yes
+
+- name: 持久化 ARP 抑制配置
+  copy:
+    content: |
+      net.ipv4.conf.all.arp_ignore = 1
+      net.ipv4.conf.all.arp_announce = 2
+      net.ipv4.conf.lo.arp_ignore = 1
+      net.ipv4.conf.lo.arp_announce = 2
+    dest: /etc/sysctl.d/99-lvs-arp.conf
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: 移除旧的 ifcfg-lo:0 配置（避免混淆）
+  file:
+    path: /etc/sysconfig/network-scripts/ifcfg-{{ lo_alias }}
+    state: absent

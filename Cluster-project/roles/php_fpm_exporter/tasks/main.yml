@@ -1,0 +1,145 @@
+---
+# 1. 检查 PHP-FPM 是否已安装（必要前置条件）
+- name: 检查 php-fpm 是否已安装
+  command: which php-fpm
+  register: php_fpm_check
+  ignore_errors: yes
+
+- name: 终止部署（PHP-FPM 未安装）
+  fail:
+    msg: "PHP-FPM 未安装，请先安装 PHP-FPM。"
+  when: php_fpm_check.rc != 0
+
+# 2. 配置 PHP-FPM status 页面
+- name: 检查 php-fpm 配置文件是否已包含 status 路径
+  lineinfile:
+    path: /etc/php-fpm.d/www.conf
+    regexp: '^pm\.status_path ='
+    line: "pm.status_path = {{ php_fpm_status_path }}"
+    backup: yes
+  register: status_config_changed
+  notify: restart php-fpm
+
+# 3. 如果配置未生效，强制写入
+- name: 确保 status 路径被添加（如果没有该行）
+  lineinfile:
+    path: /etc/php-fpm.d/www.conf
+    insertafter: '^;pm\.status_path'
+    line: "pm.status_path = {{ php_fpm_status_path }}"
+  when: not status_config_changed.changed
+
+# 4. 获取 PHP-FPM 运行用户（用于后续权限）
+- name: 获取 php-fpm 运行用户
+  shell: |
+    ps aux | grep -E 'php-fpm: master' | grep -v grep | awk '{print $1}'
+  register: php_fpm_user
+  changed_when: false
+
+# 5. 将 exporter 用户加入 php-fpm 用户组（确保 socket 读取权限）
+- name: 将 {{ user }} 用户加入 {{ php_fpm_user.stdout }} 组
+  user:
+    name: "{{ user }}"
+    groups: "{{ php_fpm_user.stdout }}"
+    append: yes
+  when: php_fpm_user.stdout != ""
+
+# 6. 创建 exporter 系统用户
+- name: 创建 {{ user }} 用户
+  user:
+    name: "{{ user }}"
+    system: yes
+    shell: /bin/false
+    create_home: no
+
+# 7. 删除旧的临时解压目录
+- name: 删除旧的临时解压目录
+  file:
+    path: /tmp/php_fpm_exporter_install
+    state: absent
+
+# 8. 创建临时解压目录
+- name: 创建临时解压目录
+  file:
+    path: /tmp/php_fpm_exporter_install
+    state: directory
+    mode: 0755
+
+# 9. 解压 tar.gz 包到临时目录
+- name: 解压 php-fpm_exporter 压缩包
+  unarchive:
+    src: "{{ soft_src }}"
+    dest: /tmp/php_fpm_exporter_install
+    remote_src: no
+
+# 10. 查找二进制文件
+- name: 查找 php-fpm_exporter 二进制文件
+  find:
+    paths: /tmp/php_fpm_exporter_install
+    patterns: "{{ binary_name }}"
+    file_type: file
+    recurse: yes
+  register: found_binary
+
+- name: 断言找到二进制文件
+  fail:
+    msg: "在解压目录中未找到二进制文件 {{ binary_name }}，请检查压缩包内容。"
+  when: found_binary.files | length == 0
+
+# 11. 复制二进制到最终路径
+- name: 复制二进制到 /usr/local/bin
+  copy:
+    src: "{{ found_binary.files[0].path }}"
+    dest: "{{ install_path }}"
+    mode: 0755
+    remote_src: yes
+
+# 12. 清理临时解压目录
+- name: 删除临时解压目录
+  file:
+    path: /tmp/php_fpm_exporter_install
+    state: absent
+
+# 13. 删除旧的 systemd 服务文件
+- name: 删除可能过期的 systemd 服务文件
+  file:
+    path: "/etc/systemd/system/{{ service_name }}.service"
+    state: absent
+  register: service_file_removed
+
+# 14. 部署新的 systemd 服务文件
+- name: 部署 systemd service 文件
+  template:
+    src: "{{ service_name }}.service.j2"
+    dest: "/etc/systemd/system/{{ service_name }}.service"
+    owner: root
+    group: root
+    mode: 0644
+  notify: restart php_fpm_exporter
+
+# 15. 重新加载 systemd
+- name: 重新加载 systemd
+  systemd:
+    daemon_reload: yes
+
+# 16. 启动并启用 php-fpm_exporter 服务
+- name: 启动并启用 php-fpm_exporter 服务
+  systemd:
+    name: "{{ service_name }}"
+    state: started
+    enabled: yes
+
+# 17. 验证服务真正运行
+- name: 验证 php-fpm_exporter 服务状态
+  command: systemctl is-active {{ service_name }}
+  register: service_status
+  failed_when: service_status.stdout != "active"
+  changed_when: false
+
+# 18. 验证 exporter 端口
+- name: 等待 exporter 端口响应
+  wait_for:
+    port: "{{ exporter_port }}"
+    host: "0.0.0.0"
+    timeout: 10
+  delegate_to: localhost
+  ignore_errors: yes

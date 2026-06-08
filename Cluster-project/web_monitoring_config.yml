@@ -1,0 +1,28 @@
+- hosts: webs
+  become: yes
+  roles:
+    - web_monitoring_config   # 配置监控端点（如防火墙、配置文件等）
+    - node_exporter
+    - nginx_exporter
+    - php_fpm_exporter        # 后续启用
+
+  # 确保每个 exporter 服务已启动并开机自启
+  post_tasks:
+    - name: 启动并启用 node_exporter
+      systemd:
+        name: node_exporter
+        state: started
+        enabled: yes
+      # 只在 node_exporter 角色执行后运行，可以通过判断条件避免重复
+
+    - name: 启动并启用 nginx_exporter
+      systemd:
+        name: nginx_exporter
+        state: started
+        enabled: yes
+
+    - name: 启动并启用 php_fpm_exporter（当角色启用时）
+      systemd:
+        name: php_fpm_exporter
+        state: started
+        enabled: yes
